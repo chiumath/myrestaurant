@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Favorite Restaurants</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --edit-color: #0ea5e9;
+            --edit-hover: #0284c7;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--primary-color);
+        }
+
+        /* Form Styling */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        input {
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+        }
+
+        button {
+            cursor: pointer;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .btn-add {
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 16px;
+        }
+
+        .btn-add:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* List Styling */
+        .restaurant-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .restaurant-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background-color: #fafafa;
+        }
+
+        .restaurant-info a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 16px;
+            transition: color 0.2s;
+        }
+
+        .restaurant-info a:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-edit {
+            background-color: var(--edit-color);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background-color: var(--edit-hover);
+        }
+
+        .btn-delete {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background-color: var(--danger-hover);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🍽️ My Restaurant List</h1>
+
+    <!-- Form to Add/Edit Restaurants -->
+    <div class="form-group">
+        <input type="hidden" id="edit-index">
+        <input type="text" id="res-name" placeholder="Restaurant Name (e.g., Mum Mum Thai)" required>
+        <input type="url" id="res-url" placeholder="OpenRice / Website Link (https://...)" required>
+        <button class="btn-add" id="btn-submit" onclick="handleSubmit()">Add Restaurant</button>
+    </div>
+
+    <!-- Restaurant List Container -->
+    <ul class="restaurant-list" id="restaurant-list"></ul>
+</div>
+
+<script>
+    // Initial data seeded if the user opens the page for the first time
+    const defaultRestaurants = [
+        { name: "Mum Mum Thai", url: "https://s.openrice.com/QrbS0oZ0F00~uXlHlAw" },
+        { name: "Jo Jo Indian Cuisine", url: "https://s.openrice.com/QrbS0Npe000~uXlHlAw" },
+        { name: "in:joi", url: "https://s.openrice.com/QrbS0Pky600~uXlHlAw" },
+        { name: "大燁", url: "https://s.openrice.com/QrbS0LkaG00~uXlHlAw" },
+        { name: "八八嫩豆腐鍋", url: "https://s.openrice.com/QrbS0msiD00~uXlHlAw" }
+    ];
+
+    // Load from localStorage or use defaults
+    let restaurants = JSON.parse(localStorage.getItem('myRestaurants'));
+    if (!restaurants) {
+        restaurants = defaultRestaurants;
+        saveData();
+    }
+
+    const listElement = document.getElementById('restaurant-list');
+    const nameInput = document.getElementById('res-name');
+    const urlInput = document.getElementById('res-url');
+    const submitBtn = document.getElementById('btn-submit');
+    const editIndexInput = document.getElementById('edit-index');
+
+    // Function to render the list on screen
+    function renderList() {
+        listElement.innerHTML = '';
+        restaurants.forEach((restaurant, index) => {
+            const li = document.createElement('li');
+            li.className = 'restaurant-item';
+            li.innerHTML = `
+                <div class="restaurant-info">
+                    <a href="${restaurant.url}" target="_blank">🔗 ${restaurant.name}</a>
+                </div>
+                <div class="actions">
+                    <button class="btn-edit" onclick="setupEdit(${index})">Edit</button>
+                    <button class="btn-delete" onclick="deleteRestaurant(${index})">Delete</button>
+                </div>
+            `;
+            listElement.appendChild(li);
+        });
+    }
+
+    // Save current state to localStorage
+    function saveData() {
+        localStorage.setItem('myRestaurants', JSON.stringify(restaurants));
+    }
+
+    // Handle both adding new items and updating edited items
+    function handleSubmit() {
+        const name = nameInput.value.trim();
+        let url = urlInput.value.trim();
+
+        if (!name || !url) {
+            alert('Please fill out both fields.');
+            return;
+        }
+
+        // Quick check to ensure URLs start with http or https
+        if (!/^https?:\/\//i.test(url)) {
+            url = 'https://' + url;
+        }
+
+        const editIndex = editIndexInput.value;
+
+        if (editIndex === "") {
+            // Add Mode
+            restaurants.push({ name, url });
+        } else {
+            // Edit Mode
+            restaurants[parseInt(editIndex)] = { name, url };
+            // Reset form state
+            editIndexInput.value = "";
+            submitBtn.innerText = "Add Restaurant";
+            submitBtn.classList.remove('btn-edit');
+            submitBtn.classList.add('btn-add');
+        }
+
+        saveData();
+        renderList();
+        
+        // Clear inputs
+        nameInput.value = '';
+        urlInput.value = '';
+    }
+
+    // Populate the form fields with chosen restaurant details to edit
+    function setupEdit(index) {
+        const item = restaurants[index];
+        nameInput.value = item.name;
+        urlInput.value = item.url;
+        editIndexInput.value = index;
+
+        submitBtn.innerText = "Update Restaurant";
+        submitBtn.className = "btn-add btn-edit"; // Swaps coloring to match edit action
+        nameInput.focus();
+    }
+
+    // Delete restaurant function
+    function deleteRestaurant(index) {
+        if (confirm(`Are you sure you want to remove "${restaurants[index].name}"?`)) {
+            restaurants.splice(index, 1);
+            saveData();
+            renderList();
+            
+            // Clear edit state if the item being edited gets deleted
+            if (editIndexInput.value == index) {
+                editIndexInput.value = "";
+                submitBtn.innerText = "Add Restaurant";
+                submitBtn.className = "btn-add";
+                nameInput.value = '';
+                urlInput.value = '';
+            }
+        }
+    }
+
+    // Initial load
+    renderList();
+</script>
+
+</body>
+</html>
